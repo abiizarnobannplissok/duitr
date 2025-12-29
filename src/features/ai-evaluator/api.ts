@@ -18,24 +18,34 @@ export async function getFinanceInsight(summary: FinanceSummary): Promise<string
     const language = i18next.language || 'id';
     const prompt = buildPrompt(summary, language);
     
+    console.log('[AI Insight] Calling Cohere API with model: command-r-plus');
+    console.log('[AI Insight] Prompt length:', prompt.length, 'characters');
+    
     const response = await cohere.chat({
-      model: 'command-r-plus', // Best model for financial analysis & reasoning
+      model: 'command-r-plus',
       message: prompt,
-      temperature: 0.3, // Lower temperature for more consistent, factual analysis
-      maxTokens: 1500, // Longer response for comprehensive analysis
+      temperature: 0.3,
+      maxTokens: 1500,
     });
 
+    console.log('[AI Insight] Response received:', response);
     const result = response.text?.trim();
     
     if (!result) {
+      console.error('[AI Insight] Empty response from Cohere');
       return language === 'id' 
         ? 'Maaf, gagal mendapatkan analisis dari AI. Silakan coba lagi.'
         : 'Sorry, failed to get insight from AI. Please try again.';
     }
 
+    console.log('[AI Insight] Success! Response length:', result.length);
     return result;
   } catch (error) {
-    console.error('Error getting finance insight:', error);
+    console.error('[AI Insight] Error details:', error);
+    if (error instanceof Error) {
+      console.error('[AI Insight] Error message:', error.message);
+      console.error('[AI Insight] Error stack:', error.stack);
+    }
     const language = i18next.language || 'id';
     throw new Error(
       language === 'id' 
