@@ -1,0 +1,237 @@
+
+import React, { useState } from 'react';
+import { useFinance } from '@/context/FinanceContext';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/currency/CurrencyInput';
+import { SupportedCurrency } from '@/utils/currency';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { DatePicker } from '@/components/ui/date-picker';
+import { useTranslation } from 'react-i18next';
+import CategorySelector from '@/components/CategorySelector';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { motion } from 'framer-motion';
+import { PlusCircle } from 'lucide-react';
+import AnimatedText from '@/components/ui/animated-text';
+
+
+interface IncomeFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const IncomeForm: React.FC<IncomeFormProps> = ({ open, onOpenChange }) => {
+  const { wallets, addTransaction } = useFinance();
+  const { toast } = useToast();
+  const { t } = useTranslation();
+  
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [formData, setFormData] = useState({
+    amount: 0,
+    categoryId: null as number | null,
+    description: '',
+    walletId: '',
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleAmountChange = (amount: number) => {
+    setFormData({ ...formData, amount });
+  };
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedDate) {
+      toast({
+        title: t('common.error'),
+        description: t('transactions.errors.select_date'),
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Validation
+    if (formData.amount <= 0 || !formData.categoryId || !formData.description || !formData.walletId) {
+      toast({
+        title: t('common.error'),
+        description: t('transactions.errors.fill_all_fields'),
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Format date to ISO string
+    const dateString = selectedDate.toISOString().split('T')[0];
+    
+    // Add transaction
+    addTransaction({
+      amount: formData.amount,
+      categoryId: formData.categoryId!,
+      description: formData.description,
+      date: dateString,
+      type: 'income',
+      walletId: formData.walletId,
+    });
+    
+    // Reset form
+    setFormData({
+      amount: 0,
+      categoryId: null,
+      description: '',
+      walletId: '',
+    });
+    setSelectedDate(new Date());
+    
+    // Show success message
+    toast({
+      title: t('common.success'),
+      description: t('transactions.income_added'),
+    });
+    
+    // Close dialog
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-[#1A1A1A] to-[#0F0F0F] border border-white/10 text-white backdrop-blur-xl shadow-2xl">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-2xl font-bold text-white flex items-center gap-3">
+            <div className="p-2 bg-[#C6FE1E]/10 rounded-full">
+              <PlusCircle className="h-6 w-6 text-[#C6FE1E]" />
+            </div>
+            <AnimatedText 
+              text={t('transactions.add_income')}
+              animationType="fade"
+            />
+          </DialogTitle>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="grid gap-6 py-0">
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+              <div className="w-1 h-4 bg-[#C6FE1E] rounded-full"></div>
+              <AnimatedText text={t('transactions.amount')} />
+            </Label>
+            <CurrencyInput
+              value={formData.amount}
+              onChange={handleAmountChange}
+              placeholder="0.00"
+              required
+              className="[&>div>input]:bg-[#242425]/80 [&>div>input]:border-white/10 [&>div>input]:text-white [&>div>input]:h-12 [&>div>input]:rounded-xl [&>div>input]:hover:bg-[#242425] [&>div>input]:focus:ring-2 [&>div>input]:focus:ring-[#C6FE1E]/50"
+            />
+          </div>
+          
+          <div className="space-y-3">
+            <Label htmlFor="categoryId" className="text-sm font-medium text-gray-300 flex items-center gap-2">
+              <div className="w-1 h-4 bg-[#C6FE1E] rounded-full"></div>
+              <AnimatedText text={t('transactions.category')} />
+            </Label>
+            <CategorySelector
+              type="income"
+              value={formData.categoryId}
+              onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+              placeholder={t('transactions.categoryform')}
+              className="bg-[#242425]/80 border-white/10 text-white h-12 rounded-xl hover:bg-[#242425] focus:ring-2 focus:ring-[#C6FE1E]/50"
+            />
+          </div>
+          
+          <div className="space-y-3">
+            <Label htmlFor="walletId" className="text-sm font-medium text-gray-300 flex items-center gap-2">
+              <div className="w-1 h-4 bg-[#C6FE1E] rounded-full"></div>
+              <AnimatedText text={t('transactions.wallet')} />
+            </Label>
+            <Select
+              value={formData.walletId}
+              onValueChange={(value) => setFormData({ ...formData, walletId: value })}
+            >
+              <SelectTrigger className="bg-[#242425]/80 border border-white/10 text-white h-12 rounded-xl hover:bg-[#242425] transition-colors duration-200 focus:ring-2 focus:ring-[#C6FE1E]/50">
+                <SelectValue>
+                  <AnimatedText 
+                    text={formData.walletId ? 
+                      wallets.find(w => w.id === formData.walletId)?.name || t('wallets.select_wallet') :
+                      t('wallets.select_wallet')
+                    }
+                  />
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="bg-[#242425] border border-white/10 text-white backdrop-blur-xl">
+                {wallets.map((wallet) => (
+                  <SelectItem key={wallet.id} value={wallet.id} className="hover:bg-[#333]/80 focus:bg-[#333]/80 hover:text-white focus:text-white transition-colors duration-200">
+                    <AnimatedText text={wallet.name} />
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-3">
+            <Label htmlFor="description" className="text-sm font-medium text-gray-300 flex items-center gap-2">
+              <div className="w-1 h-4 bg-[#C6FE1E] rounded-full"></div>
+              <AnimatedText text={t('transactions.description')} />
+            </Label>
+            <Input
+              id="description"
+              name="description"
+              placeholder={t('transactions.enter_description')}
+              value={formData.description}
+              onChange={handleChange}
+              required
+              className="bg-[#242425]/80 border border-white/10 text-white h-12 rounded-xl hover:bg-[#242425] transition-colors duration-200 focus:ring-2 focus:ring-[#C6FE1E]/50"
+            />
+          </div>
+          
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+              <div className="w-1 h-4 bg-[#C6FE1E] rounded-full"></div>
+              <AnimatedText text={t('transactions.date')} />
+            </Label>
+            <DatePicker 
+              date={selectedDate}
+              setDate={setSelectedDate}
+              className="[&>div>button]:bg-[#242425]/80 [&>div>button]:border [&>div>button]:border-white/10 [&>div>button]:rounded-xl [&>div>button]:hover:bg-[#242425] [&>div>button]:transition-colors [&>div>button]:duration-200"
+            />
+          </div>
+          
+        </form>
+        
+        <DialogFooter className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3 pt-6">
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full"
+          >
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)} 
+              className="w-full h-12 border border-white/20 hover:bg-white/5 text-white rounded-xl transition-all duration-200 font-medium"
+            >
+              <AnimatedText text={t('buttons.cancel')} />
+            </Button>
+          </motion.div>
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full"
+          >
+            <Button 
+              type="submit"
+              onClick={handleSubmit}
+              className="w-full h-12 bg-gradient-to-r from-[#C6FE1E] to-[#A8E016] hover:from-[#B0E018] hover:to-[#98D014] text-[#0D0D0D] font-semibold border-0 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <AnimatedText text={t('transactions.add_income')} />
+            </Button>
+          </motion.div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default IncomeForm;

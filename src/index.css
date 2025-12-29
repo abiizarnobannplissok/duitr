@@ -1,0 +1,317 @@
+@import '@fontsource/space-grotesk/400.css';
+@import '@fontsource/space-grotesk/500.css';
+@import '@fontsource/space-grotesk/600.css';
+@import '@fontsource/space-grotesk/700.css';
+@import 'react-day-picker/dist/style.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Updated for requested light mode: green, white, black, dark grey */
+    --background: 0 0% 100%; /* White background */
+    --foreground: 0 0% 0%; /* Black text */
+    
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 0 0% 0%; /* Black */
+    
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 0 0% 0%; /* Black */
+    
+    --primary: 84 98% 56%; /* Green #C6FE1E */
+    --primary-foreground: 0 0% 0%; /* Black text on green */
+    
+    --secondary: 0 0% 96%; /* Lighter Grey */
+    --secondary-foreground: 0 0% 20%; /* Dark Grey */
+    
+    --muted: 0 0% 96%; /* Light Grey */
+    --muted-foreground: 0 0% 40%; /* Dark Grey for muted text */
+    
+    --accent: 84 98% 56%; /* Green */
+    --accent-foreground: 0 0% 0%; /* Black */
+    
+    --destructive: 0 84% 60%; /* Red */
+    --destructive-foreground: 0 0% 100%; /* White */
+    
+    --border: 0 0% 90%; /* Light Grey */
+    --input: 0 0% 90%; /* Light Grey */
+    --ring: 84 98% 56%; /* Green */
+    
+    --radius: 1rem;
+
+    --finance-income: 142 76% 60%;
+    --finance-expense: 0 84% 60%;
+    --finance-saving: 200 98% 60%;
+    --finance-investment: 250 60% 60%;
+  }
+  
+  .dark {
+    /* Updated for requested dark mode: black, green, white, light grey */
+    --background: 0 0% 5%; /* Black background #0D0D0D */
+    --foreground: 0 0% 100%; /* White text */
+    
+    --card: 0 0% 10%; /* Slightly lighter black */
+    --card-foreground: 0 0% 100%; /* White */
+    
+    --popover: 0 0% 5%; /* Black */
+    --popover-foreground: 0 0% 100%; /* White */
+    
+    --primary: 84 98% 56%; /* Green #C6FE1E */
+    --primary-foreground: 0 0% 5%; /* Black text on green buttons */
+    
+    --secondary: 0 0% 15%; /* Dark Grey */
+    --secondary-foreground: 0 0% 100%; /* White */
+    
+    --muted: 0 0% 15%; /* Dark Grey */
+    --muted-foreground: 0 0% 70%; /* Light Grey for muted text */
+    
+    --accent: 84 98% 56%; /* Green */
+    --accent-foreground: 0 0% 0%; /* Black */
+    
+    --destructive: 0 84% 60%; /* Red */
+    --destructive-foreground: 0 0% 100%; /* White */
+    
+    --border: 0 0% 20%; /* Dark Grey for borders */
+    --input: 0 0% 20%; /* Dark Grey for inputs */
+    --ring: 84 98% 56%; /* Green */
+
+    --finance-income: 142 76% 60%;
+    --finance-expense: 0 84% 60%;
+    --finance-saving: 200 98% 60%;
+    --finance-investment: 250 60% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Space Grotesk', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-display: swap;
+    overflow-x: hidden;
+  }
+
+  html, body, #root {
+    @apply h-full;
+  }
+
+  .h1 {
+    @apply text-4xl font-bold leading-tight;
+  }
+
+  .h2 {
+    @apply text-3xl font-semibold leading-snug;
+  }
+
+  .h3 {
+    @apply text-2xl font-medium leading-snug;
+  }
+
+  .p {
+    @apply text-base font-normal leading-relaxed;
+  }
+
+  .button-primary {
+    @apply font-semibold;
+  }
+
+  .button-secondary {
+    @apply font-medium;
+  }
+}
+
+/* Light mode specific overrides */
+.light .bg-\[\#0D0D0D\] {
+  background-color: #FFFFFF;
+}
+
+.light .text-white {
+  color: #222222;
+}
+
+.light .bg-\[\#1A1A1A\] {
+  background-color: #F3F4F6;
+}
+
+.light .bg-\[\#1A1A1A\]\/80 {
+  background-color: rgba(243, 244, 246, 0.9);
+}
+
+.light .bg-\[\#242425\] {
+  background-color: #E5E7EB;
+}
+
+.light .bg-\[\#242425\]\/70 {
+  background-color: rgba(229, 231, 235, 0.8);
+}
+
+.light .border-\[\#242425\] {
+  border-color: #D1D5DB;
+}
+
+.light .text-\[\#868686\] {
+  color: #555555;
+}
+
+/* Fix green text on light backgrounds */
+.light .text-\[\#C6FE1E\] {
+  color: #222222;
+}
+
+.light .bg-white .text-\[\#C6FE1E\], 
+.light .bg-gray-100 .text-\[\#C6FE1E\], 
+.light .bg-gray-200 .text-\[\#C6FE1E\] {
+  color: #222222;
+}
+
+/* Additional fixes for dark text on light background */
+.light .bg-\[\#242425\].text-white input,
+.light .bg-\[\#242425\].text-white button,
+.light .bg-\[\#242425\].text-white {
+  color: #222222;
+}
+
+.light .bg-background {
+  background-color: #F8F9FA;
+}
+
+/* Ensure proper contrast for transaction list in light mode */
+.light .space-y-3.text-white {
+  color: #222222;
+}
+
+.light .bg-\[\#242425\].p-4.rounded-xl {
+  background-color: #E5E7EB;
+  color: #222222;
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/70 dark:bg-black/50 backdrop-blur-lg border border-white/20 dark:border-white/10;
+  }
+  
+  .nav-item {
+    @apply flex items-center gap-2 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background/50 transition-all duration-200;
+  }
+  
+  .nav-item.active {
+    @apply text-primary bg-primary/10;
+  }
+
+  .fade-mask {
+    -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+.animate-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    height: auto;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease forwards;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease forwards;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-scale {
+  animation: scale 0.3s ease forwards;
+}
+
+@keyframes scale {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Swipe transition animations */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.page-transition-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.page-transition-exit-active {
+  opacity: 0;
+  transform: translateX(-100%);
+  transition: opacity 300ms, transform 300ms;
+}
+
+/* Fix pointer-events for Radix UI Portal wrappers to enable scrolling */
+[data-radix-popper-content-wrapper] {
+  pointer-events: auto !important;
+}
+
+/* Fix scrolling for Radix UI Select viewport on mobile devices */
+[data-radix-select-viewport] {
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch;
+}

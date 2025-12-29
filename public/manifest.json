@@ -1,0 +1,80 @@
+{
+  "name": "Duitr - Your personal finance manager",
+  "short_name": "Duitr",
+  "description": "Manage your finances, track expenses, and reach your financial goals with Duitr",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D0D0D",
+  "theme_color": "#C6FE1E",
+  "orientation": "portrait",
+  "categories": ["finance", "productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/pwa-icons/new/96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-icons/new/128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-icons/new/192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-icons/new/192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your financial overview",
+      "url": "/dashboard",
+      "icons": [{ "src": "/pwa-icons/new/96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Transactions",
+      "short_name": "Transactions",
+      "description": "View your transaction history",
+      "url": "/transactions",
+      "icons": [{ "src": "/pwa-icons/new/96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Add Expense",
+      "short_name": "Expense",
+      "description": "Add a new expense",
+      "url": "/?action=add-expense",
+      "icons": [{ "src": "/pwa-icons/new/96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Add Income",
+      "short_name": "Income",
+      "description": "Add a new income",
+      "url": "/?action=add-income",
+      "icons": [{ "src": "/pwa-icons/new/96.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/duitr_ss.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Dashboard view of Duitr - Track your finances easily"
+    }
+  ],
+  "related_applications": [],
+  "scope": "/",
+  "id": "duitr-finance-manager"
+} 
