@@ -11,18 +11,18 @@ const cohere = new CohereClient({ token: COHERE_API_KEY });
 
 /**
  * Get AI-powered financial insight using Cohere
- * Model: command-r-plus (best for reasoning & financial analysis)
+ * Model: command-r (stable model for financial analysis)
  */
 export async function getFinanceInsight(summary: FinanceSummary): Promise<string> {
   try {
     const language = i18next.language || 'id';
     const prompt = buildPrompt(summary, language);
     
-    console.log('[AI Insight] Calling Cohere API with model: command-r-plus');
+    console.log('[AI Insight] Calling Cohere API with model: command-r');
     console.log('[AI Insight] Prompt length:', prompt.length, 'characters');
     
     const response = await cohere.chat({
-      model: 'command-r-plus',
+      model: 'command-r',
       message: prompt,
       temperature: 0.3,
       maxTokens: 1500,
@@ -57,7 +57,7 @@ export async function getFinanceInsight(summary: FinanceSummary): Promise<string
 
 /**
  * Ask AI a specific question about your finances
- * Model: command-r-plus (best for Q&A reasoning)
+ * Model: command-r (stable model for Q&A reasoning)
  */
 export async function askAI(question: string, context: FinanceSummary): Promise<string> {
   try {
@@ -71,7 +71,7 @@ export async function askAI(question: string, context: FinanceSummary): Promise<
     const userMessage = `${contextPrompt}\n\n${language === 'id' ? 'Pertanyaan' : 'Question'}: ${question}`;
     
     const response = await cohere.chat({
-      model: 'command-r-plus',
+      model: 'command-r',
       message: userMessage,
       preamble: systemPrompt,
       temperature: 0.3,
