@@ -63,32 +63,29 @@ const EvaluateContent: React.FC = () => {
 
     // Process income transactions with proper category names
     const income = filteredTransactions
-      .filter(t => t.type === 'income')
-      .reduce((acc, t) => {
-        // Get category display name
-        const category = findById(t.categoryId);
-        const categoryName = category ? getDisplayName(category, i18n.language) : t('income.categories.other', 'Other Income');
+      .filter(txn => txn.type === 'income')
+      .reduce((acc, txn) => {
+        const category = findById(txn.categoryId);
+        const categoryName = category ? getDisplayName(category) : t('income.categories.other', 'Other Income');
         const existing = acc.find(item => item.category === categoryName);
         if (existing) {
-          existing.amount += t.amount;
+          existing.amount += txn.amount;
         } else {
-          acc.push({ category: categoryName, amount: t.amount });
+          acc.push({ category: categoryName, amount: txn.amount });
         }
         return acc;
       }, [] as Array<{ category: string; amount: number }>);
 
-    // Process expense transactions with proper category names
     const expenses = filteredTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((acc, t) => {
-        // Get category display name
-        const category = findById(t.categoryId);
-        const categoryName = category ? getDisplayName(category, i18n.language) : t('transactions.categories.other', 'Other Expenses');
+      .filter(txn => txn.type === 'expense')
+      .reduce((acc, txn) => {
+        const category = findById(txn.categoryId);
+        const categoryName = category ? getDisplayName(category) : t('transactions.categories.other', 'Other Expenses');
         const existing = acc.find(item => item.category === categoryName);
         if (existing) {
-          existing.amount += t.amount;
+          existing.amount += txn.amount;
         } else {
-          acc.push({ category: categoryName, amount: t.amount });
+          acc.push({ category: categoryName, amount: txn.amount });
         }
         return acc;
       }, [] as Array<{ category: string; amount: number }>);
