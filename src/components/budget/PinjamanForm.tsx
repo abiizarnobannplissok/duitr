@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { FormattedInput } from '@/components/ui/formatted-input';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 // Zod schema for validation
 const pinjamanSchema = z.object({
