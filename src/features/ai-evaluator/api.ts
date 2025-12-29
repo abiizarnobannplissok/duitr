@@ -29,7 +29,7 @@ export async function getFinanceInsight(summary: FinanceSummary): Promise<string
       model: 'command-r-plus-08-2024',
       message: prompt,
       temperature: 0.3,
-      maxTokens: 600,
+      maxTokens: 1000,
     });
 
     const rawResult = response.text?.trim() || '';
@@ -101,27 +101,30 @@ ${incomeText ? 'Sumber Pemasukan:\n' + incomeText : ''}
 ${expenseText ? 'Pengeluaran Utama:\n' + expenseText : ''}
 
 INSTRUKSI:
-Berikan analisis keuangan yang sederhana dan mudah dipahami dalam format berikut:
+Berikan analisis keuangan yang mendalam dan mudah dipahami dalam format berikut (300-450 kata):
 
-**Status Keuangan:** [Sehat/Perlu Perhatian/Kritis] - jelaskan mengapa dalam 1 kalimat
+**Status Keuangan:** [Sehat/Perlu Perhatian/Kritis] - Jelaskan kondisi keuangan saat ini dengan detail (2-3 kalimat). Sertakan persentase saving rate dan apa artinya.
 
-**Pola Pengeluaran:** Identifikasi 1-2 pola penting dari data di atas (kategori dominan, tren)
+**Analisis Pola Pengeluaran:** Identifikasi 2-3 pola penting dari data pengeluaran. Jelaskan kategori yang dominan, persentase, dan dampaknya terhadap keuangan. Bandingkan dengan standar ideal jika perlu.
 
-**Rekomendasi:** Berikan 1 saran spesifik untuk perbaikan
+**Rekomendasi:** Berikan 2-3 saran spesifik dan actionable untuk memperbaiki kondisi keuangan. Fokus pada kategori pengeluaran terbesar dengan angka target yang jelas (contoh: "kurangi 20% atau Rp 500ribu/bulan").
 
-**Tips Keuangan Sehat:** Berikan 1 strategi praktis untuk konteks Indonesia
+**Koreksi Kedepan:** Buat action plan konkret untuk 1-3 bulan ke depan. Berikan langkah-langkah praktis yang bisa langsung diterapkan beserta target angkanya.
+
+**Tips Keuangan Sehat:** Berikan 1-2 prinsip atau strategi keuangan yang sesuai konteks Indonesia (misal: aturan 50/30/20, dana darurat, investasi konservatif).
 
 PENTING:
-- Maksimal 300 kata total
+- Target: 300-450 kata total untuk analisis yang mendalam
 - Gunakan bahasa Indonesia yang santai tapi profesional
-- Tulis dengan gaya seperti konsultan keuangan berpengalaman
+- Tulis dengan gaya seperti konsultan keuangan berpengalaman yang peduli
 - JANGAN gunakan simbol # atau markdown heading
 - Gunakan format **Judul:** untuk penekanan
-- Langsung to the point, hindari basa-basi`;
+- Sertakan angka spesifik dan persentase untuk membuat analisis lebih konkret
+- Berikan insight yang actionable, bukan hanya observasi umum`;
   } else {
     return `You are a 10-year experienced financial analyst specializing in personal finance consulting in Indonesia.
 
-FINANCIAL DATA
+DATA KEUANGAN
 Period: ${startDate} - ${endDate}
 Income: Rp${summary.totalIncome.toLocaleString('id-ID')}
 Expenses: Rp${summary.totalExpenses.toLocaleString('id-ID')}
@@ -132,23 +135,26 @@ ${incomeText ? 'Income Sources:\n' + incomeText : ''}
 ${expenseText ? 'Main Expenses:\n' + expenseText : ''}
 
 INSTRUCTIONS:
-Provide a simple and easy-to-understand financial analysis in this format:
+Provide an in-depth and easy-to-understand financial analysis in this format (300-450 words):
 
-**Financial Status:** [Healthy/Needs Attention/Critical] - explain why in 1 sentence
+**Financial Status:** [Healthy/Needs Attention/Critical] - Explain current financial condition in detail (2-3 sentences). Include saving rate percentage and what it means.
 
-**Spending Patterns:** Identify 1-2 important patterns from the data above (dominant categories, trends)
+**Spending Pattern Analysis:** Identify 2-3 important patterns from expense data. Explain dominant categories, percentages, and their impact on finances. Compare with ideal standards if needed.
 
-**Recommendation:** Give 1 specific advice for improvement
+**Recommendations:** Provide 2-3 specific and actionable suggestions to improve financial condition. Focus on largest expense categories with clear target numbers (example: "reduce by 20% or Rp 500k/month").
 
-**Healthy Finance Tips:** Provide 1 practical strategy for Indonesian context
+**Future Corrections:** Create a concrete action plan for the next 1-3 months. Give practical steps that can be immediately implemented along with target numbers.
+
+**Healthy Finance Tips:** Provide 1-2 financial principles or strategies suitable for Indonesian context (e.g., 50/30/20 rule, emergency fund, conservative investment).
 
 IMPORTANT:
-- Maximum 300 words total
+- Target: 300-450 words total for in-depth analysis
 - Use friendly but professional English
-- Write like an experienced financial consultant
+- Write like an experienced financial consultant who cares
 - DO NOT use # symbols or markdown headings
 - Use **Title:** format for emphasis
-- Get straight to the point, avoid fluff`;
+- Include specific numbers and percentages to make analysis more concrete
+- Provide actionable insights, not just general observations`;
   }
 }
 
