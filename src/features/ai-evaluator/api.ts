@@ -52,6 +52,45 @@ export async function getFinanceInsight(summary: FinanceSummary): Promise<string
   }
 }
 
+export async function askAI(question: string, context: FinanceSummary): Promise<string> {
+  try {
+    const language = i18next.language || 'id';
+    const contextPrompt = buildContextPrompt(context, language);
+    
+    const systemPrompt = language === 'id'
+      ? `Kamu adalah asisten keuangan pribadi yang ahli dalam analisis keuangan individu di Indonesia. Berikan jawaban yang spesifik, praktis, dan berbasis data keuangan pengguna.`
+      : `You are a personal finance assistant expert in individual financial analysis in Indonesia. Provide specific, practical answers based on user's financial data.`;
+
+    const userMessage = `${contextPrompt}\n\n${language === 'id' ? 'Pertanyaan' : 'Question'}: ${question}`;
+    
+    const response = await cohere.chat({
+      model: 'command-r-plus-08-2024',
+      message: userMessage,
+      preamble: systemPrompt,
+      temperature: 0.3,
+      maxTokens: 600,
+    });
+
+    const rawResult = response.text?.trim() || '';
+    const result = cleanMarkdownSymbols(rawResult);
+    
+    if (!result) {
+      return language === 'id'
+        ? 'Maaf, tidak dapat menjawab pertanyaan ini.'
+        : 'Sorry, cannot answer this question.';
+    }
+
+    return result;
+  } catch (error) {
+    const language = i18next.language || 'id';
+    throw new Error(
+      language === 'id'
+        ? 'Gagal mendapatkan jawaban dari AI. Silakan coba lagi.'
+        : 'Failed to get answer from AI. Please try again.'
+    );
+  }
+}
+
 function buildPrompt(summary: FinanceSummary, language: string): string {
   const { startDate, endDate, income, expenses } = summary;
 
