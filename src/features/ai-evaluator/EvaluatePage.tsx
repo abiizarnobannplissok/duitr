@@ -134,7 +134,6 @@ const EvaluatePage: React.FC = () => {
       // Reset chat messages when new evaluation is done
       setChatMessages([]);
     } catch (error) {
-      console.error('Error getting insight:', error);
       setInsight(t('ai.errorMessage', 'Sorry, an error occurred while analyzing your financial data. Please try again.'));
     } finally {
       setIsLoading(false);
