@@ -16,6 +16,7 @@ interface AIAddTransactionDialogProps {
   addTransaction: (transaction: any) => Promise<void>;
   wallets: Array<{ id: string; name: string; currency?: string; balance: number }>;
   currencySymbol: string;
+  userId?: string;
 }
 
 interface ChatMessage {
@@ -25,7 +26,7 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-export function AIAddTransactionDialog({ open, onClose, addTransaction, wallets, currencySymbol }: AIAddTransactionDialogProps) {
+export function AIAddTransactionDialog({ open, onClose, addTransaction, wallets, currencySymbol, userId }: AIAddTransactionDialogProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [input, setInput] = useState('');
@@ -74,7 +75,7 @@ export function AIAddTransactionDialog({ open, onClose, addTransaction, wallets,
     setIsLoading(true);
 
     try {
-      const response: AIAddTransactionResponse = await aiService.parseTransactionInput(userInput);
+      const response: AIAddTransactionResponse = await aiService.parseTransactionInput(userInput, userId);
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),

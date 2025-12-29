@@ -4,12 +4,14 @@ import { Sparkles, MessageSquare, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { useFinance } from '@/context/FinanceContext';
+import { useAuth } from '@/context/AuthContext';
 import { AIAddTransactionDialog } from './AIAddTransactionDialog';
 
 export function AIFloatingButton() {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
   const { addTransaction, wallets, currencySymbol } = useFinance();
+  const { user } = useAuth();
 
   const handleClick = () => {
     setIsOpen(true);
@@ -83,6 +85,7 @@ export function AIFloatingButton() {
             addTransaction={addTransaction}
             wallets={wallets}
             currencySymbol={currencySymbol}
+            userId={user?.id}
           />
         )}
       </AnimatePresence>

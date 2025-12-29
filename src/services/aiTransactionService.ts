@@ -1,29 +1,41 @@
 import { CohereClient } from 'cohere-ai';
 import type { Transaction } from '@/types/finance';
+import type { Category } from '@/types/category';
+import categoryService from '@/services/categoryService';
 import i18next from 'i18next';
 
 // Cohere API configuration - hardcoded for personal use
 const COHERE_API_KEY = "inokSymtUT9vsmmcBvAzl5E1zr2vAZNxywqDumTj";
 
-// Minimal category hints for AI
-const AI_CATEGORY_HINTS = {
-  expense: [
-    { id: '1', name: 'Groceries' }, { id: '2', name: 'Dining' }, { id: '3', name: 'Transportation' },
-    { id: '4', name: 'Subscription' }, { id: '5', name: 'Housing' }, { id: '6', name: 'Entertainment' },
-    { id: '7', name: 'Shopping' }, { id: '8', name: 'Health' }, { id: '9', name: 'Education' },
-    { id: '10', name: 'Vehicle' }, { id: '11', name: 'Personal' }, { id: '12', name: 'Other' }
-  ],
-  income: [
-    { id: '13', name: 'Salary' }, { id: '14', name: 'Business' }, { id: '15', name: 'Investment' },
-    { id: '16', name: 'Gift' }, { id: '17', name: 'Other' }
-  ]
+// Keyword hints for each category to help AI match better
+// These are used to enrich the prompt with context
+const CATEGORY_KEYWORD_HINTS: Record<string, string[]> = {
+  // Expense categories
+  'groceries': ['belanja', 'supermarket', 'indomaret', 'alfamart', 'sayur', 'buah', 'daging', 'sembako', 'grocery', 'warung'],
+  'dining': ['makan', 'nasi', 'restoran', 'cafe', 'kopi', 'coffee', 'restaurant', 'food', 'lunch', 'dinner', 'breakfast', 'sarapan', 'minum', 'jajan', 'snack', 'bakso', 'sate', 'padang', 'warteg', 'gopod', 'grabfood'],
+  'transportation': ['transport', 'bensin', 'parkir', 'ojek', 'grab', 'gojek', 'taxi', 'bus', 'kereta', 'train', 'toll', 'tol', 'angkot', 'mrt', 'lrt', 'transjakarta', 'uber', 'maxim'],
+  'subscription': ['langganan', 'subscribe', 'netflix', 'spotify', 'youtube', 'disney', 'hbo', 'amazon', 'prime', 'membership', 'icloud', 'google one', 'canva', 'figma', 'github', 'premium'],
+  'housing': ['rumah', 'sewa', 'rent', 'kontrakan', 'kos', 'apartemen', 'apartment', 'listrik', 'pln', 'air', 'pdam', 'gas', 'internet', 'wifi', 'indihome', 'biznet'],
+  'entertainment': ['hiburan', 'game', 'film', 'movie', 'bioskop', 'cinema', 'konser', 'concert', 'karaoke', 'steam', 'playstation', 'xbox', 'nintendo'],
+  'shopping': ['belanja', 'baju', 'sepatu', 'tas', 'clothes', 'fashion', 'shoes', 'bag', 'tokopedia', 'shopee', 'lazada', 'blibli', 'zalora', 'uniqlo', 'h&m', 'zara'],
+  'health': ['kesehatan', 'dokter', 'doctor', 'obat', 'medicine', 'pharmacy', 'apotek', 'rumah sakit', 'hospital', 'klinik', 'clinic', 'vitamin', 'supplement'],
+  'education': ['pendidikan', 'kursus', 'course', 'buku', 'book', 'sekolah', 'school', 'kuliah', 'university', 'udemy', 'coursera', 'les', 'tutor', 'training'],
+  'vehicle': ['kendaraan', 'motor', 'mobil', 'car', 'service', 'servis', 'oli', 'ban', 'tire', 'spare part', 'bengkel', 'cuci mobil', 'cuci motor'],
+  'personal': ['pribadi', 'personal', 'salon', 'barber', 'potong rambut', 'skincare', 'makeup', 'parfum', 'laundry', 'dry clean'],
+  'other_expense': ['lainnya', 'other', 'misc', 'lain-lain'],
+  // Income categories
+  'salary': ['gaji', 'salary', 'pendapatan', 'upah', 'wage', 'payroll', 'thr', 'bonus kerja'],
+  'business': ['bisnis', 'business', 'usaha', 'jualan', 'penjualan', 'sales', 'profit', 'keuntungan', 'freelance', 'project'],
+  'investment': ['investasi', 'investment', 'dividen', 'dividend', 'saham', 'stock', 'reksadana', 'mutual fund', 'crypto', 'bitcoin', 'bunga', 'interest'],
+  'gift': ['hadiah', 'gift', 'kado', 'angpao', 'uang', 'dari', 'transfer dari', 'kiriman', 'bude', 'kakak', 'ayah', 'mama', 'ibu', 'paman', 'tante', 'nenek', 'kakek', 'saudara'],
+  'other_income': ['lainnya', 'other', 'pemasukan lain']
 };
 
 export interface ParsedTransaction {
   description: string;
   amount: number;
   category: string;
-  categoryId: string;
+  categoryId: number;
   type: 'income' | 'expense';
   confidence: number;
 }
@@ -35,9 +47,19 @@ export interface AIAddTransactionResponse {
   error?: string;
 }
 
+interface CategoryForAI {
+  id: number;
+  name: string;
+  type: 'income' | 'expense';
+  keywords: string[];
+}
+
 export class AITransactionService {
   private static instance: AITransactionService;
   private client: CohereClient;
+  private cachedCategories: CategoryForAI[] | null = null;
+  private cacheTimestamp: number = 0;
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
     this.client = new CohereClient({ token: COHERE_API_KEY });
@@ -50,7 +72,70 @@ export class AITransactionService {
     return AITransactionService.instance;
   }
 
-  async parseTransactionInput(input: string, defaultWalletId?: string): Promise<AIAddTransactionResponse> {
+  /**
+   * Fetch categories from database and format for AI prompt
+   * Includes caching to avoid repeated DB calls
+   */
+  private async getCategoriesForAI(userId?: string): Promise<CategoryForAI[]> {
+    const now = Date.now();
+    
+    // Return cached if still valid
+    if (this.cachedCategories && (now - this.cacheTimestamp) < this.CACHE_TTL) {
+      return this.cachedCategories;
+    }
+
+    try {
+      // Fetch all categories from database (default + user custom)
+      const categories = await categoryService.getAll(userId);
+      const language = i18next.language || 'id';
+      
+      // Format categories for AI with keyword hints
+      this.cachedCategories = categories
+        .filter(cat => cat.type === 'income' || cat.type === 'expense')
+        .map(cat => {
+          const name = language === 'id' ? cat.id_name : cat.en_name;
+          const categoryKey = cat.category_key?.toLowerCase() || name.toLowerCase();
+          
+          // Find matching keyword hints
+          let keywords: string[] = [];
+          for (const [key, hints] of Object.entries(CATEGORY_KEYWORD_HINTS)) {
+            if (categoryKey.includes(key) || key.includes(categoryKey.replace('_', ''))) {
+              keywords = hints;
+              break;
+            }
+          }
+          
+          // For custom categories, use the category name as keyword
+          if (keywords.length === 0) {
+            keywords = [name.toLowerCase(), cat.en_name.toLowerCase(), cat.id_name.toLowerCase()];
+          }
+
+          return {
+            id: cat.category_id,
+            name: name,
+            type: cat.type as 'income' | 'expense',
+            keywords
+          };
+        });
+
+      this.cacheTimestamp = now;
+      return this.cachedCategories;
+    } catch (error) {
+      console.error('Error fetching categories for AI:', error);
+      // Return empty array on error - will use fallback
+      return [];
+    }
+  }
+
+  /**
+   * Clear category cache (call when categories are updated)
+   */
+  clearCategoryCache(): void {
+    this.cachedCategories = null;
+    this.cacheTimestamp = 0;
+  }
+
+  async parseTransactionInput(input: string, userId?: string): Promise<AIAddTransactionResponse> {
     try {
       const language = i18next.language || 'id';
       const trimmedInput = input.trim();
@@ -68,8 +153,11 @@ export class AITransactionService {
         defaultType = 'income';
       }
 
+      // Fetch categories from database
+      const categories = await this.getCategoriesForAI(userId);
+
       // Try AI parsing first
-      const transactions = await this.parseWithCohere(trimmedInput, defaultType, language);
+      const transactions = await this.parseWithCohere(trimmedInput, defaultType, language, categories);
       
       if (transactions.length > 0) {
         return {
@@ -82,7 +170,7 @@ export class AITransactionService {
       }
 
       // Fallback to regex parsing
-      const fallbackTransactions = this.fallbackParseAll(trimmedInput, defaultType);
+      const fallbackTransactions = this.fallbackParseAll(trimmedInput, defaultType, categories);
       
       if (fallbackTransactions.length > 0) {
         return {
@@ -104,9 +192,10 @@ export class AITransactionService {
       console.error('Error parsing transactions:', error);
       
       // Try fallback on error
+      const categories = await this.getCategoriesForAI(userId);
       const incomeKeywords = ['pemasukan', 'income', 'gaji', 'salary', 'terima', 'dapat', 'dari'];
       const isIncome = incomeKeywords.some(k => input.toLowerCase().includes(k));
-      const fallbackTransactions = this.fallbackParseAll(input, isIncome ? 'income' : 'expense');
+      const fallbackTransactions = this.fallbackParseAll(input, isIncome ? 'income' : 'expense', categories);
       
       if (fallbackTransactions.length > 0) {
         return {
@@ -128,9 +217,25 @@ export class AITransactionService {
   private async parseWithCohere(
     input: string, 
     defaultType: 'income' | 'expense',
-    language: string
+    language: string,
+    categories: CategoryForAI[]
   ): Promise<ParsedTransaction[]> {
+    // Build category list for prompt
+    const expenseCategories = categories.filter(c => c.type === 'expense');
+    const incomeCategories = categories.filter(c => c.type === 'income');
+
+    const formatCategoryList = (cats: CategoryForAI[]) => 
+      cats.map(c => `  - ID ${c.id}: "${c.name}" (keywords: ${c.keywords.slice(0, 5).join(', ')})`).join('\n');
+
     const systemPrompt = `You are a financial transaction parser. Parse the user's text and extract INDIVIDUAL transactions only.
+
+AVAILABLE CATEGORIES:
+
+EXPENSE CATEGORIES:
+${formatCategoryList(expenseCategories)}
+
+INCOME CATEGORIES:
+${formatCategoryList(incomeCategories)}
 
 CRITICAL RULES:
 1. Indonesian number format: DOT is thousand separator
@@ -148,11 +253,23 @@ CRITICAL RULES:
    - "GoPay - 103.600" → individual balance/transaction
    - "Makan siang - 25.000" → individual expense
 
-4. Family names (Bude, Kakak, Ayah, Mama, Ibu, Paman, etc.) = income, category "Gift"
-5. E-wallets (GoPay, OVO, Dana, ShopeePay) = income, category "Other"
+4. CATEGORY MATCHING - Use the category_id from the list above:
+   - Match keywords in the transaction description to find the best category
+   - For food/eating related: use Dining category
+   - For subscriptions (Netflix, Spotify, etc.): use Subscription category
+   - For transport (Grab, Gojek, bensin): use Transportation category
+   - For family names (Bude, Kakak, Ayah, etc.): use Gift category (income)
+   - E-wallets (GoPay, OVO, Dana): use Other category
 
-Output ONLY a JSON array with individual transactions:
-[{"description": "person/item name", "amount": number, "type": "income/expense", "category": "category"}]`;
+5. OUTPUT FORMAT - Return a JSON array with these exact fields:
+   - description: string (item/person name)
+   - amount: number (parsed amount as integer)
+   - type: "income" or "expense"
+   - category_id: number (the ID from the category list above)
+   - category_name: string (the name of the selected category)
+
+Output ONLY a JSON array, no explanation:
+[{"description": "name", "amount": 100000, "type": "expense", "category_id": 2, "category_name": "Dining"}]`;
 
     const userPrompt = `Parse these transactions (default type: ${defaultType}). Remember to SKIP totals and summaries:
 
@@ -196,13 +313,25 @@ Return ONLY JSON array of INDIVIDUAL transactions (no totals):`;
         const amount = this.parseAmount(item.amount);
         if (amount > 0) {
           const type = item.type === 'income' ? 'income' : 'expense';
-          const category = item.category || (type === 'income' ? 'Gift' : 'Other');
+          const categoryName = item.category_name || (type === 'income' ? 'Other' : 'Other');
+          
+          // Use category_id from AI response, or find by name
+          let categoryId = item.category_id;
+          if (!categoryId || typeof categoryId !== 'number') {
+            categoryId = this.findCategoryIdByName(categoryName, type, categories);
+          }
+          
+          // Validate category exists
+          const validCategory = categories.find(c => c.id === categoryId);
+          if (!validCategory) {
+            categoryId = this.getDefaultCategoryId(type, categories);
+          }
           
           transactions.push({
             description: item.description || 'Transaction',
             amount: amount,
-            category: category,
-            categoryId: this.mapToCategoryId(category, type),
+            category: validCategory?.name || categoryName,
+            categoryId: categoryId,
             type: type,
             confidence: 0.95
           });
@@ -226,7 +355,7 @@ Return ONLY JSON array of INDIVIDUAL transactions (no totals):`;
     return summaryKeywords.some(keyword => lowerText.includes(keyword));
   }
 
-  private fallbackParseAll(input: string, defaultType: 'income' | 'expense'): ParsedTransaction[] {
+  private fallbackParseAll(input: string, defaultType: 'income' | 'expense', categories: CategoryForAI[]): ParsedTransaction[] {
     const transactions: ParsedTransaction[] = [];
     
     // Split by newlines first
@@ -247,7 +376,7 @@ Return ONLY JSON array of INDIVIDUAL transactions (no totals):`;
       // Skip section headers
       if (trimmedLine.startsWith('💰') || trimmedLine.startsWith('📱')) continue;
       
-      const parsed = this.fallbackParseLine(trimmedLine, defaultType);
+      const parsed = this.fallbackParseLine(trimmedLine, defaultType, categories);
       if (parsed && parsed.amount > 0) {
         transactions.push(parsed);
       }
@@ -256,7 +385,7 @@ Return ONLY JSON array of INDIVIDUAL transactions (no totals):`;
     return transactions;
   }
 
-  private fallbackParseLine(item: string, defaultType: 'income' | 'expense'): ParsedTransaction | null {
+  private fallbackParseLine(item: string, defaultType: 'income' | 'expense', categories: CategoryForAI[]): ParsedTransaction | null {
     // Extract amount using regex - look for Indonesian format numbers
     const amountMatch = item.match(/[\d.]+(?:,\d+)?/g);
     if (!amountMatch) return null;
@@ -273,24 +402,14 @@ Return ONLY JSON array of INDIVIDUAL transactions (no totals):`;
     // Skip if description looks like a summary
     if (this.isSummaryLine(desc)) return null;
     
-    // Determine category based on description
-    const lowerDesc = desc.toLowerCase();
-    let category = defaultType === 'income' ? 'Gift' : 'Other';
-    
-    // E-wallet detection
-    if (['gopay', 'ovo', 'dana', 'shopeepay', 'linkaja'].some(w => lowerDesc.includes(w))) {
-      category = 'Other';
-    }
-    // Family names = Gift
-    else if (['bude', 'kakak', 'ayah', 'mama', 'ibu', 'paman', 'tante', 'nenek', 'kakek'].some(w => lowerDesc.includes(w))) {
-      category = 'Gift';
-    }
+    // Find best matching category
+    const { categoryId, categoryName } = this.findBestCategory(desc, defaultType, categories);
 
     return {
       description: desc,
       amount: amount,
-      category: category,
-      categoryId: this.mapToCategoryId(category, defaultType),
+      category: categoryName,
+      categoryId: categoryId,
       type: defaultType,
       confidence: 0.7
     };
@@ -355,41 +474,99 @@ Return ONLY JSON array of INDIVIDUAL transactions (no totals):`;
     return 0;
   }
 
-  private mapToCategoryId(categoryName: string | undefined, type: 'income' | 'expense'): string {
-    if (!categoryName) {
-      return type === 'expense' ? '12' : '17';
-    }
+  /**
+   * Find the best matching category based on description keywords
+   */
+  private findBestCategory(
+    description: string, 
+    type: 'income' | 'expense', 
+    categories: CategoryForAI[]
+  ): { categoryId: number; categoryName: string } {
+    const lowerDesc = description.toLowerCase();
+    const typeCategories = categories.filter(c => c.type === type);
     
-    const allCategories = [...AI_CATEGORY_HINTS.expense, ...AI_CATEGORY_HINTS.income];
-    const normalizedInput = categoryName.toLowerCase();
-    
-    let category = allCategories.find(cat => cat.name.toLowerCase() === normalizedInput);
-    if (!category) {
-      category = this.findBestCategoryMatch(normalizedInput, type);
-    }
-    
-    return category?.id || (type === 'expense' ? '12' : '17');
-  }
+    // Score each category based on keyword matches
+    let bestMatch: CategoryForAI | null = null;
+    let bestScore = 0;
 
-  private findBestCategoryMatch(input: string, type: 'income' | 'expense'): {id: string, name: string} | undefined {
-    const categories = type === 'expense' ? AI_CATEGORY_HINTS.expense : AI_CATEGORY_HINTS.income;
-    
-    const keywordMap: Record<string, string[]> = {
-      'gift': ['gift', 'hadiah', 'kado', 'bonus', 'uang', 'dari'],
-      'salary': ['gaji', 'salary', 'pendapatan', 'upah'],
-      'dining': ['makan', 'nasi', 'restoran', 'cafe', 'kopi'],
-      'shopping': ['belanja', 'baju', 'sepatu', 'tas'],
-      'transportation': ['transport', 'bensin', 'parkir', 'ojek', 'grab']
-    };
-
-    for (const category of categories) {
-      const keywords = keywordMap[category.name.toLowerCase()] || [category.name.toLowerCase()];
-      if (keywords.some(keyword => input.includes(keyword))) {
-        return category;
+    for (const category of typeCategories) {
+      let score = 0;
+      for (const keyword of category.keywords) {
+        if (lowerDesc.includes(keyword.toLowerCase())) {
+          // Longer keyword matches get higher score
+          score += keyword.length;
+        }
+      }
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = category;
       }
     }
 
-    return categories.find(cat => cat.name.toLowerCase() === 'other') || categories[categories.length - 1];
+    if (bestMatch) {
+      return { categoryId: bestMatch.id, categoryName: bestMatch.name };
+    }
+
+    // Return default "Other" category for the type
+    const defaultCat = typeCategories.find(c => 
+      c.name.toLowerCase().includes('other') || 
+      c.name.toLowerCase().includes('lainnya')
+    );
+    
+    if (defaultCat) {
+      return { categoryId: defaultCat.id, categoryName: defaultCat.name };
+    }
+
+    // Last resort: return first category of that type
+    if (typeCategories.length > 0) {
+      return { categoryId: typeCategories[0].id, categoryName: typeCategories[0].name };
+    }
+
+    // Absolute fallback
+    return { categoryId: 12, categoryName: 'Other' };
+  }
+
+  /**
+   * Find category ID by name
+   */
+  private findCategoryIdByName(name: string, type: 'income' | 'expense', categories: CategoryForAI[]): number {
+    const lowerName = name.toLowerCase();
+    const typeCategories = categories.filter(c => c.type === type);
+    
+    // Exact match first
+    const exact = typeCategories.find(c => c.name.toLowerCase() === lowerName);
+    if (exact) return exact.id;
+    
+    // Partial match
+    const partial = typeCategories.find(c => 
+      c.name.toLowerCase().includes(lowerName) || 
+      lowerName.includes(c.name.toLowerCase())
+    );
+    if (partial) return partial.id;
+    
+    // Return default
+    return this.getDefaultCategoryId(type, categories);
+  }
+
+  /**
+   * Get default category ID for a type (usually "Other")
+   */
+  private getDefaultCategoryId(type: 'income' | 'expense', categories: CategoryForAI[]): number {
+    const typeCategories = categories.filter(c => c.type === type);
+    
+    // Find "Other" category
+    const other = typeCategories.find(c => 
+      c.name.toLowerCase().includes('other') || 
+      c.name.toLowerCase().includes('lainnya')
+    );
+    
+    if (other) return other.id;
+    
+    // Return first category of that type, or fallback
+    if (typeCategories.length > 0) return typeCategories[0].id;
+    
+    return type === 'expense' ? 12 : 17; // Hardcoded fallback
   }
 
   validateTransactions(transactions: ParsedTransaction[]): {valid: ParsedTransaction[], invalid: ParsedTransaction[]} {
