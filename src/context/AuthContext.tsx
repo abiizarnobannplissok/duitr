@@ -40,15 +40,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
-        const { data, error } = await getSession();
+        const { session, error } = await getSession();
         
         if (error) {
           logAuthEvent('session_initialization_error', {}, error);
           console.error('Error checking authentication status:', error);
           setUser(null);
-        } else if (data.session?.user) {
-          logAuthEvent('session_initialized', { userId: data.session.user.id });
-          const currentUser = data.session.user;
+        } else if (session?.user) {
+          logAuthEvent('session_initialized', { userId: session.user.id });
+          const currentUser = session.user;
           setUser(currentUser);
           loadUserSettings(currentUser);
 
