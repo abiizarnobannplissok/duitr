@@ -1,11 +1,12 @@
-import { CohereClient } from 'cohere-ai';
 import type { Transaction } from '@/types/finance';
 import type { Category } from '@/types/category';
 import categoryService from '@/services/categoryService';
 import i18next from 'i18next';
 
-// Cohere API configuration - hardcoded for personal use
-const COHERE_API_KEY = "inokSymtUT9vsmmcBvAzl5E1zr2vAZNxywqDumTj";
+// Cerebras API configuration - using gpt-oss-120b for speed and power
+const CEREBRAS_API_KEY = "csk-vd3p9twtkxrcet3chhh3myje8nv4phvn5n6e9kyctth63hw2";
+const CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions";
+const MODEL = 'gpt-oss-120b';
 
 // Keyword hints for each category to help AI match better
 // These are used to enrich the prompt with context
@@ -56,13 +57,11 @@ interface CategoryForAI {
 
 export class AITransactionService {
   private static instance: AITransactionService;
-  private client: CohereClient;
   private cachedCategories: CategoryForAI[] | null = null;
   private cacheTimestamp: number = 0;
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
-    this.client = new CohereClient({ token: COHERE_API_KEY });
   }
 
   static getInstance(): AITransactionService {
@@ -157,7 +156,7 @@ export class AITransactionService {
       const categories = await this.getCategoriesForAI(userId);
 
       // Try AI parsing first
-      const transactions = await this.parseWithCohere(trimmedInput, defaultType, language, categories);
+      const transactions = await this.parseWithCerebras(trimmedInput, defaultType, language, categories);
       
       if (transactions.length > 0) {
         return {
@@ -214,7 +213,7 @@ export class AITransactionService {
     }
   }
 
-  private async parseWithCohere(
+  private async parseWithCerebras(
     input: string, 
     defaultType: 'income' | 'expense',
     language: string,
@@ -278,15 +277,32 @@ ${input}
 Return ONLY JSON array of INDIVIDUAL transactions (no totals):`;
 
     try {
-      const response = await this.client.chat({
-        model: 'command-r7b-12-2024',
-        message: userPrompt,
-        preamble: systemPrompt,
-        temperature: 0.1,
+      const response = await fetch(CEREBRAS_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          max_tokens: 1000,
+          temperature: 0.1,
+        }),
       });
 
-      const content = response.text;
-      console.log('Cohere response:', content);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Cerebras API error:', response.status, errorText);
+        return [];
+      }
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content || '';
+      console.log('Cerebras response:', content);
 
       // Extract JSON array from response
       const jsonMatch = content.match(/\[[\s\S]*\]/);
@@ -340,7 +356,7 @@ Return ONLY JSON array of INDIVIDUAL transactions (no totals):`;
 
       return transactions;
     } catch (error) {
-      console.error('Cohere parsing error:', error);
+      console.error('Cerebras parsing error:', error);
       return [];
     }
   }
