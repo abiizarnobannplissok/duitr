@@ -6,6 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckCircle, Clock, Send, Sparkles, Wallet, XCircle, Trash2 } from 'lucide-react';
+import CategoryIcon from '@/components/shared/CategoryIcon';
+import { useCategories } from '@/hooks/useCategories';
 import { useTranslation } from 'react-i18next';
 import { AITransactionService, type ParsedTransaction, type AIAddTransactionResponse } from '@/services/aiTransactionService';
 import { useToast } from '@/hooks/use-toast';
@@ -320,9 +322,10 @@ export function AIAddTransactionDialog({ open, onClose, addTransaction, wallets,
                             </span>
                           </div>
                           <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
-                            <span className="bg-gray-700 px-2 py-1 rounded">
-                              {tx.category}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <CategoryIcon category={tx.categoryId} size="sm" animate={false} />
+                              <span className="text-gray-300">{tx.category}</span>
+                            </div>
                             <span className="font-medium text-white">
                               {formatAmount(tx.amount)}
                             </span>
