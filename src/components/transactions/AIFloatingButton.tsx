@@ -61,20 +61,24 @@ export function AIFloatingButton() {
         </Button>
       </motion.div>
 
-      {/* Tooltip */}
-      <motion.div
-        className="fixed bottom-36 right-4 z-[60] bg-[#1A1A1A] text-white px-3 py-2 rounded-lg shadow-lg text-sm pointer-events-none"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
-        transition={{ delay: 1 }}
-      >
-        <span className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-[#C6FE1E]" />
-          {t('ai.addWithAI', 'Add with AI')}
-        </span>
-        <div className="absolute -bottom-1 right-4 w-2 h-2 bg-[#1A1A1A] transform rotate-45" />
-      </motion.div>
+      {/* Tooltip - hide when dialog is open */}
+      <AnimatePresence>
+        {!isOpen && (
+          <motion.div
+            className="fixed bottom-36 right-4 z-[60] bg-[#1A1A1A] text-white px-3 py-2 rounded-lg shadow-lg text-sm pointer-events-none md:bottom-40 md:right-6"
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+            transition={{ duration: 0.2, delay: 1 }}
+          >
+            <span className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-[#C6FE1E]" />
+              {t('ai.addWithAI', 'Add with AI')}
+            </span>
+            <div className="absolute -bottom-1 right-4 w-2 h-2 bg-[#1A1A1A] transform rotate-45" />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Dialog */}
       <AnimatePresence>
