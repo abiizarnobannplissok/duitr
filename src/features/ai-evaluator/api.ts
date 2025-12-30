@@ -1,13 +1,13 @@
-// AI Finance Insight API - Powered by Cohere
-import { CohereClient } from 'cohere-ai';
+// AI Finance Insight API - Powered by Cerebras
+import Cerebras from '@cerebras/cerebras_cloud_sdk';
 import type { FinanceSummary } from '@/types/finance';
 import i18next from 'i18next';
 
-// Cohere API configuration - hardcoded for personal use
-const COHERE_API_KEY = "inokSymtUT9vsmmcBvAzl5E1zr2vAZNxywqDumTj";
+// Cerebras API configuration - hardcoded for personal use
+const CEREBRAS_API_KEY = "csk-vd3p9twtkxrcet3chhh3myje8nv4phvn5n6e9kyctth63hw2";
 
-// Initialize Cohere client
-const cohere = new CohereClient({ token: COHERE_API_KEY });
+// Initialize Cerebras client
+const cerebras = new Cerebras({ apiKey: CEREBRAS_API_KEY });
 
 function cleanMarkdownSymbols(text: string): string {
   return text
@@ -17,22 +17,22 @@ function cleanMarkdownSymbols(text: string): string {
 }
 
 /**
- * Get AI-powered financial insight using Cohere
- * Model: command-r-plus-08-2024 (best for financial analysis)
+ * Get AI-powered financial insight using Cerebras
+ * Model: zai-glm-4.6 (fast inference for financial analysis)
  */
 export async function getFinanceInsight(summary: FinanceSummary): Promise<string> {
   try {
     const language = i18next.language || 'id';
     const prompt = buildPrompt(summary, language);
     
-    const response = await cohere.chat({
-      model: 'command-r-plus-08-2024',
-      message: prompt,
+    const response = await cerebras.chat.completions.create({
+      model: 'zai-glm-4.6',
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
-      maxTokens: 800,
+      max_tokens: 800,
     });
 
-    const rawResult = response.text?.trim() || '';
+    const rawResult = response.choices[0]?.message?.content?.trim() || '';
     const result = cleanMarkdownSymbols(rawResult);
     
     if (!result) {
@@ -63,15 +63,17 @@ export async function askAI(question: string, context: FinanceSummary): Promise<
 
     const userMessage = `${contextPrompt}\n\n${language === 'id' ? 'Pertanyaan' : 'Question'}: ${question}`;
     
-    const response = await cohere.chat({
-      model: 'command-r-plus-08-2024',
-      message: userMessage,
-      preamble: systemPrompt,
+    const response = await cerebras.chat.completions.create({
+      model: 'zai-glm-4.6',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ],
       temperature: 0.3,
-      maxTokens: 600,
+      max_tokens: 600,
     });
 
-    const rawResult = response.text?.trim() || '';
+    const rawResult = response.choices[0]?.message?.content?.trim() || '';
     const result = cleanMarkdownSymbols(rawResult);
     
     if (!result) {
