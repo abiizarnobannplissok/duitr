@@ -1,50 +1,47 @@
-// AI Finance Insight API - Powered by Cerebras (using fetch for browser compatibility)
 import type { FinanceSummary } from '@/types/finance';
 import i18next from 'i18next';
 
-const CEREBRAS_API_KEY = "csk-vd3p9twtkxrcet3chhh3myje8nv4phvn5n6e9kyctth63hw2";
-const CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions";
-const MODEL = 'zai-glm-4.6';
+const COHERE_API_KEY = "inokSymtUT9vsmmcBvAzl5E1zr2vAZNxywqDumTj";
+const COHERE_API_URL = "https://api.cohere.com/v2/chat";
+const MODEL = 'command-r-08-2024';
 
-interface CerebrasMessage {
+interface CohereMessage {
   role: 'user' | 'system' | 'assistant';
   content: string;
 }
 
-interface CerebrasResponse {
-  choices: Array<{
-    message: {
-      content?: string;
-      reasoning?: string;
-    };
-  }>;
+interface CohereResponse {
+  message: {
+    content: Array<{ type: string; text: string }>;
+  };
 }
 
-async function callCerebras(messages: CerebrasMessage[], maxTokens = 800): Promise<string> {
-  const response = await fetch(CEREBRAS_API_URL, {
+async function callCohere(messages: CohereMessage[], maxTokens = 800): Promise<string> {
+  console.log('[AI] Calling Cohere with model:', MODEL);
+  
+  const response = await fetch(COHERE_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${COHERE_API_KEY}`,
     },
     body: JSON.stringify({
       model: MODEL,
       messages,
-      temperature: 0.3,
       max_tokens: maxTokens,
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('[AI] Cerebras API error:', response.status, errorText);
-    throw new Error(`Cerebras API error: ${response.status}`);
+    console.error('[AI] Cohere API error:', response.status, errorText);
+    throw new Error(`Cohere API error: ${response.status}`);
   }
 
-  const data: CerebrasResponse = await response.json();
-  const msg = data.choices[0]?.message;
-  const result = msg?.content?.trim() || msg?.reasoning?.trim() || '';
-  console.log('[AI] Raw response - content:', !!msg?.content, 'reasoning:', !!msg?.reasoning);
+  const data: CohereResponse = await response.json();
+  const result = data.message?.content?.[0]?.text?.trim() || '';
+  console.log('[AI] Response received, length:', result.length);
   return result;
 }
 
@@ -60,9 +57,7 @@ export async function getFinanceInsight(summary: FinanceSummary): Promise<string
     const language = i18next.language || 'id';
     const prompt = buildPrompt(summary, language);
     
-    console.log('[AI] Calling Cerebras with model:', MODEL);
-    const rawResult = await callCerebras([{ role: 'user', content: prompt }], 800);
-    console.log('[AI] Response received, length:', rawResult.length);
+    const rawResult = await callCohere([{ role: 'user', content: prompt }], 800);
     
     if (!rawResult) {
       console.error('[AI] Empty response from model');
@@ -94,12 +89,10 @@ export async function askAI(question: string, context: FinanceSummary): Promise<
 
     const userMessage = `${contextPrompt}\n\n${language === 'id' ? 'Pertanyaan' : 'Question'}: ${question}`;
     
-    console.log('[AI] Calling Cerebras askAI with model:', MODEL);
-    const rawResult = await callCerebras([
+    const rawResult = await callCohere([
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userMessage }
     ], 600);
-    console.log('[AI] askAI response received, length:', rawResult.length);
     
     if (!rawResult) {
       return language === 'id'
