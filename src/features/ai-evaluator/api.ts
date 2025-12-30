@@ -14,7 +14,8 @@ interface CerebrasMessage {
 interface CerebrasResponse {
   choices: Array<{
     message: {
-      content: string;
+      content?: string;
+      reasoning?: string;
     };
   }>;
 }
@@ -41,7 +42,10 @@ async function callCerebras(messages: CerebrasMessage[], maxTokens = 800): Promi
   }
 
   const data: CerebrasResponse = await response.json();
-  return data.choices[0]?.message?.content?.trim() || '';
+  const msg = data.choices[0]?.message;
+  const result = msg?.content?.trim() || msg?.reasoning?.trim() || '';
+  console.log('[AI] Raw response - content:', !!msg?.content, 'reasoning:', !!msg?.reasoning);
+  return result;
 }
 
 function cleanMarkdownSymbols(text: string): string {
