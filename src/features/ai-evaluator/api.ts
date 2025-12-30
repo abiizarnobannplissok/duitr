@@ -1,11 +1,48 @@
-// AI Finance Insight API - Powered by Cerebras
-import Cerebras from '@cerebras/cerebras_cloud_sdk';
+// AI Finance Insight API - Powered by Cerebras (using fetch for browser compatibility)
 import type { FinanceSummary } from '@/types/finance';
 import i18next from 'i18next';
 
 const CEREBRAS_API_KEY = "csk-vd3p9twtkxrcet3chhh3myje8nv4phvn5n6e9kyctth63hw2";
-const cerebras = new Cerebras({ apiKey: CEREBRAS_API_KEY });
+const CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions";
 const MODEL = 'zai-glm-4.6';
+
+interface CerebrasMessage {
+  role: 'user' | 'system' | 'assistant';
+  content: string;
+}
+
+interface CerebrasResponse {
+  choices: Array<{
+    message: {
+      content: string;
+    };
+  }>;
+}
+
+async function callCerebras(messages: CerebrasMessage[], maxTokens = 800): Promise<string> {
+  const response = await fetch(CEREBRAS_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages,
+      temperature: 0.3,
+      max_tokens: maxTokens,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[AI] Cerebras API error:', response.status, errorText);
+    throw new Error(`Cerebras API error: ${response.status}`);
+  }
+
+  const data: CerebrasResponse = await response.json();
+  return data.choices[0]?.message?.content?.trim() || '';
+}
 
 function cleanMarkdownSymbols(text: string): string {
   return text
@@ -20,14 +57,7 @@ export async function getFinanceInsight(summary: FinanceSummary): Promise<string
     const prompt = buildPrompt(summary, language);
     
     console.log('[AI] Calling Cerebras with model:', MODEL);
-    const response = await cerebras.chat.completions.create({
-      model: MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      max_tokens: 800,
-    });
-
-    const rawResult = response.choices[0]?.message?.content?.trim() || '';
+    const rawResult = await callCerebras([{ role: 'user', content: prompt }], 800);
     console.log('[AI] Response received, length:', rawResult.length);
     
     if (!rawResult) {
@@ -61,17 +91,10 @@ export async function askAI(question: string, context: FinanceSummary): Promise<
     const userMessage = `${contextPrompt}\n\n${language === 'id' ? 'Pertanyaan' : 'Question'}: ${question}`;
     
     console.log('[AI] Calling Cerebras askAI with model:', MODEL);
-    const response = await cerebras.chat.completions.create({
-      model: MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage }
-      ],
-      temperature: 0.3,
-      max_tokens: 600,
-    });
-
-    const rawResult = response.choices[0]?.message?.content?.trim() || '';
+    const rawResult = await callCerebras([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage }
+    ], 600);
     console.log('[AI] askAI response received, length:', rawResult.length);
     
     if (!rawResult) {
